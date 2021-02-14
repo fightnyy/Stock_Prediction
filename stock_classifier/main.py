@@ -11,7 +11,7 @@ import torch.nn as nn
 import pytorch_lightning as pl
 from naver_data import SentimentalData
 import pdb
-
+import torch.nn.functional as F
 class BertSentimental(pl.LightningModule):
     def __init__(self):
         super().__init__()
@@ -20,18 +20,15 @@ class BertSentimental(pl.LightningModule):
         self.tokenizer = KoBertTokenizer.from_pretrained('monologg/kobert')
 
     def forward(self, input_ids, attention_mask,token_type_ids):
-
         outputs = self.bert(input_ids = input_ids, attention_mask = attention_mask, token_type_ids = token_type_ids)
-        pdb.set_trace()
-        h_cls = h[:, 0]
+        h_cls = outputs['last_hidden_state'][:, 0]
         logits = self.linear(h_cls)
-        pdb.set_trace()
-        return logits, attn
+        return logits
 
 
     def training_step(self, batch, batch_idx):
         label, input_ids, attention_mask, token_type_ids = batch
-        y_hat, attn = self.forward(input_ids, attention_mask, token_type_ids)
+        y_hat= self.forward(input_ids, attention_mask, token_type_ids)
         loss = F.cross_entropy(y_hat, label)
         tensorboard_logs = {'train_loss': loss}
         return {'loss': loss, 'log': tensorboard_logs}
@@ -57,5 +54,5 @@ class BertSentimental(pl.LightningModule):
 
 if __name__ == '__main__':
     news_classifier = BertSentimental()
-    trainer = pl.Trainer(gpus=[1, 2], accelerator = 'ddp', precision = 16)
+    trainer = pl.Trainer(gpus=-1, accelerator = 'ddp', precision = 16)
     trainer.fit(news_classifier)
