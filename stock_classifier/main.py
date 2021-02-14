@@ -21,7 +21,7 @@ class BertSentimental(pl.LightningModule):
 
     def forward(self, input_ids, attention_mask,token_type_ids):
         outputs = self.bert(input_ids = input_ids, attention_mask = attention_mask, token_type_ids = token_type_ids)
-        h_cls = outputs['last_hidden_state'][:, 0]
+        h_cls = outputs[0][:, 0]
         logits = self.linear(h_cls)
         return logits
 
@@ -40,12 +40,12 @@ class BertSentimental(pl.LightningModule):
     def train_dataloader(self):
         
         train_data = SentimentalData('data/ratings_train.json')
-        return DataLoader(train_data, batch_size = 64)
+        return DataLoader(train_data, batch_size = 8)
 
     def test_dataloader(self):
 
         test_data = SentimentalData('data/ratings_test.json')
-        return DataLoader(test_data, batch_size = 64)
+        return DataLoader(test_data, batch_size = 8)
 
 
 
