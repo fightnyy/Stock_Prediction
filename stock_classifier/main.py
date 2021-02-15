@@ -22,8 +22,7 @@ class BertSentimental(pl.LightningModule):
     def forward(self, input_ids, attention_mask,token_type_ids):
 
         outputs = self.bert(input_ids = input_ids, attention_mask = attention_mask, token_type_ids = token_type_ids)
-        pdb.set_trace()
-        h_cls = h[:, 0]
+        h_cls = outputs['last_hidden_state'][:, 0]
         logits = self.linear(h_cls)
         pdb.set_trace()
         return logits, attn
@@ -57,5 +56,5 @@ class BertSentimental(pl.LightningModule):
 
 if __name__ == '__main__':
     news_classifier = BertSentimental()
-    trainer = pl.Trainer(gpus=[1, 2], accelerator = 'ddp', precision = 16)
+    trainer = pl.Trainer(gpus=-1, accelerator = 'ddp', precision = 16)
     trainer.fit(news_classifier)
