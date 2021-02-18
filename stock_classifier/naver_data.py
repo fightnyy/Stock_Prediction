@@ -7,6 +7,7 @@ sys.path.append('..')
 import json
 from tokenization_kobert import KoBertTokenizer
 from typing import List
+import pdb
 class SentimentalData(torch.utils.data.Dataset):
     def __init__(self, infile):
         """
@@ -77,7 +78,7 @@ class SentimentalData(torch.utils.data.Dataset):
         attention_mask = torch.where(
             attention_mask != -1, attention_mask, mask_tensor
         ).long()
-
+        token_type_ids = torch.tensor([[0]*128]*len(result_tokenization))
         return {
             "input_ids": padded_tokens.long(),
             "attention_mask": attention_mask.long(),
