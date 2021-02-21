@@ -3,13 +3,12 @@
 
 import sys
 sys.path.append('..')
-from tokenization_kobert import KoBertTokenizer
 from transformers import BertModel
 from torch.utils.data import DataLoader
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.metrics.functional import accuracy
 from pytorch_lightning.loggers import TensorBoardLogger
-
+from tokenization_kobert import KoBertTokenizer
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
@@ -40,10 +39,19 @@ class BertSentimental(pl.LightningModule):
         y_hat = self.forward(input_ids, attention_mask, token_type_ids)
         loss = F.cross_entropy(y_hat, label)
         acc = accuracy(y_hat, label)
-        pbar = {'train_acc':acc}
         self.log('train_loss',loss, on_epoch = True, on_step=True, prog_bar = True, logger = True)
         self.log('train_acc',acc, on_step=True, on_epoch=True,logger=True)
-        return {'loss': loss, 'progress_bar': pbar}
+        #return {'loss': loss, 'progress_bar': pbar}
+
+    def validation_step(self, batch, batch_idx):
+        label, input_ids, attention_mask,token_type_ids = batch
+        y_hat = self.forward(input_ids, attention_mask, token_type_ids)
+        loss = F.cross_entropy(y_hat, label)
+        acc = accuracy(y_hat, label)
+        self.log('val_acc',acc)
+        self.log('val_loss',loss)
+
+
 
     def test_step(self, batch, batch_idx):
         label, input_ids, attention_mask, token_type_ids = batch
@@ -53,7 +61,7 @@ class BertSentimental(pl.LightningModule):
         self.log('test_loss', loss, on_epoch=True, on_step=True, logger=True)
         self.log('test_acc',acc, on_epoch=True, on_step=True, logger = True)
         pbar = {'test_acc': acc}
-        return {'test_loss': loss, 'progress_bar':pbar}
+        #return {'test_loss': loss, 'progress_bar':pbar}
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
@@ -71,6 +79,10 @@ class BertSentimental(pl.LightningModule):
         return DataLoader(train_data,
                           batch_size=self.batch_size, num_workers=0)
 
+    def val_dataloader(self):
+        val_data = SentimentalData('data/ratings_val.json')
+        return DataLoader(val_data,
+                          batch_size = self.batch_size, num_workers=0)
     def test_dataloader(self):
 
         test_data = SentimentalData('data/ratings_test.json')
@@ -81,11 +93,12 @@ if __name__ == '__main__':
     warnings.filterwarnings("ignore")
     news_classifier = BertSentimental()
     logger = TensorBoardLogger('tb_logs', name='BertSentimental')
-    trainer = pl.Trainer(callbacks [EarlyStopping(monitor='train_loss')],logger = logger,
+    trainer = pl.Trainer(auto_scale_batch_size='binsearch',callbacks= [EarlyStopping(monitor='train_loss')],logger = logger,
                          gpus=-1,
                          accelerator='ddp',
                          precision=16,
-                        auto_select_gpus=True,
+                         auto_select_gpus=True,
                          max_epochs=10)
     #trainer = pl.Trainer(auto_lr_find = True)
-    trainer.fit(news_classifier)
+    trainer.tune(news_classifier)
+    trainer.test(news_classfier)
