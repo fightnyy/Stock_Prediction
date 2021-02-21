@@ -81,7 +81,7 @@ if __name__ == '__main__':
     warnings.filterwarnings("ignore")
     news_classifier = BertSentimental()
     logger = TensorBoardLogger('tb_logs', name='BertSentimental')
-    trainer = pl.Trainer(callbacks [EarlyStopping(monitor='train_loss')],logger = logger,
+    trainer = pl.Trainer(callbacks= [EarlyStopping(monitor='train_loss')],logger = logger,
                          gpus=-1,
                          accelerator='ddp',
                          precision=16,

@@ -7,7 +7,6 @@ sys.path.append('..')
 import json
 from tokenization_kobert import KoBertTokenizer
 from typing import List
-import pdb
 class SentimentalData(torch.utils.data.Dataset):
     def __init__(self, infile):
         """
@@ -26,9 +25,9 @@ class SentimentalData(torch.utils.data.Dataset):
                 data = json.loads(line)
                 self.label.append(data["label"])
                 self.sentence.append(data["doc"])
-       
         self.sentence_dict=self.encode_batch(self.sentence, 128)     
-
+         
+        
     def __len__(self):
         assert len(self.label) == len(self.sentence) 
         return len(self.label)
