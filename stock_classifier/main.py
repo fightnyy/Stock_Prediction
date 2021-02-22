@@ -33,36 +33,36 @@ class BertSentimental(pl.LightningModule):
         h_cls = outputs[0][:, 0]
         logits = self.linear(h_cls)
         return logits
+    
+    def _evaluate(self, batch, batch_idx, stage = None):
+        label, input_ids, attention_mask, token_type_ids = batch
+        y_hat = self.forward(input_ids, attention_mask, token_type_ids)
+        preds = torch.argmax(y_hat, dim = -1)
+        loss = F.nll_loss(y_hat, label)
+        acc = accuracy(preds, label)
+
+        if stage:
+            self.log(f'{stage}_loss',loss, prog_bar = True)
+            self.log(f'{stage}_acc',acc, prog_bar = True)
+        return loss, acc
+
 
     def training_step(self, batch, batch_idx):
         label, input_ids, attention_mask, token_type_ids = batch
         y_hat = self.forward(input_ids, attention_mask, token_type_ids)
-        loss = F.cross_entropy(y_hat, label)
-        acc = accuracy(y_hat, label)
-        self.log('train_loss',loss, on_epoch = True, on_step=True, prog_bar = True, logger = True)
-        self.log('train_acc',acc, on_step=True, on_epoch=True,logger=True)
-        #return {'loss': loss, 'progress_bar': pbar}
+        logits = F.log_softmax(y_hat, dim=-1)
+        loss = F.nll_loss(logits, label)
+        self.log('Training Loss',loss)
+        return loss
 
     def validation_step(self, batch, batch_idx):
-        label, input_ids, attention_mask,token_type_ids = batch
-        y_hat = self.forward(input_ids, attention_mask, token_type_ids)
-        loss = F.cross_entropy(y_hat, label)
-        acc = accuracy(y_hat, label)
-        self.log('val_acc',acc)
-        self.log('val_loss',loss)
+        return self._evaluate(batch, batch_idx, 'val')[0]
 
 
 
     def test_step(self, batch, batch_idx):
-        label, input_ids, attention_mask, token_type_ids = batch
-        y_hat = self.forward(input_ids, attention_mask, token_type_ids)
-        loss = F.cross_entropy(y_hat, label)
-        acc = accuracy(y_hat, label)
-        self.log('test_loss', loss, on_epoch=True, on_step=True, logger=True)
-        self.log('test_acc',acc, on_epoch=True, on_step=True, logger = True)
-        pbar = {'test_acc': acc}
-        #return {'test_loss': loss, 'progress_bar':pbar}
-
+        loss, acc = self._evaluate(batch, batch_idx, 'test')
+        self.log_dict({'test_loss':loss, 'test_acc':acc})
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
             [p for p in self.parameters() if p.requires_grad],
@@ -90,7 +90,6 @@ class BertSentimental(pl.LightningModule):
 
 
 if __name__ == '__main__':
-    warnings.filterwarnings("ignore")
     news_classifier = BertSentimental()
     logger = TensorBoardLogger('tb_logs', name='BertSentimental')
     trainer = pl.Trainer(callbacks= [EarlyStopping(monitor='val_loss')],logger = logger,
@@ -100,5 +99,5 @@ if __name__ == '__main__':
                          auto_select_gpus=True,
                          max_epochs=10)
     #trainer = pl.Trainer(auto_lr_find = True)
-    trainer.tune(news_classifier)
-    trainer.test(news_classfier)
+    trainer.fit(news_classifier)
+    trainer.test(news_classifier)
