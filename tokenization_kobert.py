@@ -17,6 +17,7 @@
 
 import logging
 import os
+import sentencepiece as spm
 import unicodedata
 from shutil import copyfile
 
